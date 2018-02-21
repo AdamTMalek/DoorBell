@@ -1,9 +1,3 @@
-/*
- * Receiver.c
- *
- * Created: 26.09.2016 18:33:29
- * Author : Adam Malek
- */ 
 #define F_CPU 14745600
 #include <avr/io.h>
 #include <util/delay.h>
@@ -22,6 +16,7 @@ char conntestMsg[] = "conntest";
 uint8_t connCounter; //This will be used to sent connection test message (conntest)
 
 void RingBell(void);
+
 int main(void)
 {
 	_delay_ms(1000); //Waiting until ESP is ready
@@ -56,53 +51,55 @@ int main(void)
 	ESP_Send(conntestMsg,0);
 	while (1)
 	{
-		if(connCounter >= 13) //Approximately a minute
+		if (connCounter >= 13) //Approximately a minute
 		{
 			ESP_Send(conntestMsg,0);
 			connCounter = 0;
 		}
 
-	// --- RF12 RECEIVING DATA --- //
+		// --- RF12 RECEIVING DATA --- //
 #if RF_UseIRQ == 1
-	if(!(RF_status.status & 0x07))
-	{
-		RF_RxStart();
-	}
-	if(RF_status.New)
-	{
-		ret = RF_RxFinish(data);
+		if (!(RF_status.status & 0x07))
+		{
+			RF_RxStart();
+		}
+		if (RF_status.New)
+		{
+			ret = RF_RxFinish(data);
 
-		if(data > 0 && ret < 254)
+			if (data > 0 && ret < 254)
+			{
+				RingBell();
+				ESP_Send(data,0);
+				data[16] = 0;
+			}
+			else if (!ret)
+			{
+				ESP_Send(crcErrorMsg, 0);
+			}
+		}
+#else
+		ret = RF_RxData(data);
+		if (ret)
 		{
 			RingBell();
 			ESP_Send(data,0);
-			data[16] = 0;
 		}
-		else if(!ret)
+		else
 		{
 			ESP_Send(crcErrorMsg, 0);
 		}
-	}
-#else
-	ret = RF_RxData(data);
-	if(ret)
-	{
-		RingBell();
-		ESP_Send(data,0);		
-	}
-	else
-	{
-		ESP_Send(crcErrorMsg, 0);
-	}
 #endif
 	}
 }
+
 void RingBell(void)
 {
 	PORTB |= (1<<BELL);
 	_delay_ms(1000);
 	PORTB &= ~(1<<BELL);
 }
+
 // --- "ALIVE" LED INTERRUPT --- //
 ISR(TIMER1_OVF_vect) //4.5s on 14MHz clock
 {

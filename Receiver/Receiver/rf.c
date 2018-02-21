@@ -44,97 +44,86 @@ void RF_Initialize(void)
 uint16_t RF_Transmit(uint16_t data)
 {
 	uint16_t ret_val = 0;
-	uint8_t i;
-
 	RF_PORT &= ~(1<<CS);
-	for (i=0; i<16; i++)
+
+	for (uint8_t i = 0; i < 16; i++)
 	{
-		if (data & 0x8000) RF_PORT |= (1<<SDI);
-		else RF_PORT &= ~(1<<SDI);
+		if (data & 0x8000) 
+			RF_PORT |= (1<<SDI);
+		else 
+			RF_PORT &= ~(1<<SDI);
 
 		ret_val <<= 1;
-		if (RF_PIN&(1<<SDO)) ret_val |= 1;
+
+		if (RF_PIN & (1<<SDO)) 
+			ret_val |= 1;
+		
 		RF_PORT |= (1<<SCK);
 		data <<= 1;
 		asm("nop");
 		asm("nop");
 		RF_PORT &= ~(1<<SCK);
 	}
-	RF_PORT |= (1<<CS);
 
+	RF_PORT |= (1<<CS);
 	return ret_val;
-	/*
-	uint8_t dataMS = (uint8_t)((data >> 8) & 0x00FF);
-	uint8_t dataLS = (uint8_t)((data & 0x00FF) & 0x00FF);
-
-	RF_PORT &= ~(1<<CS);
-
-	uint16_t response = 0x0000;
-	//MOST SIGNIFICANT BYTE
-	SPDR = dataMS;
-	while(!(SPSR & (1<<SPIF)))
-	response = (SPDR << 8);
-
-	//LEAST SIGNIFICANT BYTE
-	SPDR = dataLS;
-	while(!(SPSR & (1<<SPIF)));
-	response |= SPDR;
-
-	RF_PORT |= (1<<CS);
-
-	return response;
-	*/
 }
-//--------------------CALCULATING CHECKSUM (CRC16)--------------------------//
+
+// Calculate CRC16 checksum
 uint16_t UpdateChecksum(uint16_t checksum, uint8_t data)
 {
 	uint16_t tmp = (data<<8);
 	for(int i = 0; i < 8; i++)
 	{
-		if((checksum ^ tmp) & 0x8000)
+		if ((checksum ^ tmp) & 0x8000)
 			checksum = (checksum<<1) ^ 0x1021;
 		else
 			checksum = (checksum<<1);
-		tmp = tmp << 1;
+		tmp <<= 1;
 	}
 	return checksum;
 }
-//--------------------RANGE BAUDRATE AND FREQUENCY----------------------//
+
 void RF_SetRange(enum RANGE range)
 {
 	RF_Transmit(0x80C7 | range); //ENABLE FIFO, SET RANGE
 }
+
 void RF_SetBandwith(uint8_t bandwidth, uint8_t gain, uint8_t drssi)
 {
 	RF_Transmit(0x9000 | ((bandwidth & 7) << 5) | ((gain & 3) << 3) | (drssi & 7));
 }
+
 void RF_SetFrequency(uint16_t frequency)
 {
-	if(frequency < 96)
+	if(frequency < 96) // Below minimum
 		frequency = 96;
-	else if (frequency > 3903)
+	else if (frequency > 3903) // Above maximum
 		frequency = 3903;
+
 	RF_Transmit(0xA000 | frequency);
 }
+
 void RF_SetBaudRate(uint16_t baud)
 {
-	if(baud<663)
+	if (baud < 663)
 		return;
-	if(baud<5400)
-		RF_Transmit(0xC680 | ((43104/baud)-1));
+	if (baud < 5400)
+		RF_Transmit(0xC680 | ((43104 / baud) - 1));
 	else
-		RF_Transmit(0xC600 | ((344828UL/baud)-1));		
+		RF_Transmit(0xC600 | ((344828UL / baud) - 1));		
 }
-//----------------------WAKE UP TIMER DISABLING-------------------------//
+
 void RF_DisableWakeUpTimer(void)
 {
 	RF_Transmit(0xE000);
 }
-//---------------------------POWER SETTING------------------------------//
+
 void RF_SetPower(uint8_t power, uint8_t mod)
 {
-	RF_Transmit(0x9800 | (power & 7) | ((mod & 15)<<4));
+	RF_Transmit(0x9800 | (power & 7) | ((mod & 15) <<4));
 }
+
 /************************************************************************/
 /*                        INTERRUPT FUNCTIONS                           */
 /************************************************************************/
@@ -148,9 +137,9 @@ uint8_t RF_Data[(RF_DataLength + 10)]; // +10 FOR THE REST OF THE FRAME
 //-------------------------------ISR------------------------------------//
 ISR(INT0_vect)
 {	
-	if(RF_status.Rx)
+	if (RF_status.Rx)
 	{
-		if(RF_Index < RF_DataLength)
+		if (RF_Index < RF_DataLength)
 		{
 			RF_Data[RF_Index++] = RF_Transmit(0xB000) & 0x00FF;
 		}
@@ -161,17 +150,17 @@ ISR(INT0_vect)
 			RF_status.New = 1; //FRAME NOT RIGHT
 			return;
 		}
-		if(RF_Index >= (RF_Data[0] + 3))
+		if (RF_Index >= (RF_Data[0] + 3))
 		{
 			RF_Transmit(0x8208);
 			RF_status.Rx = 0;
 			RF_status.New = 1; //FRAME IS RIGHT
 		}
 	}
-	else if(RF_status.Tx)
+	else if (RF_status.Tx)
 	{
 		RF_Transmit(0xB800 | RF_Data[RF_Index]);
-		if(!RF_Index)
+		if (!RF_Index)
 		{
 			RF_status.Tx = 0;
 			RF_Transmit(0x8208); //TX OFF
@@ -185,11 +174,11 @@ ISR(INT0_vect)
 //-----------------------------DATA RECEIVE-----------------------------//
 uint8_t RF_RxStart(void)
 {
-	if(RF_status.New)
+	if (RF_status.New)
 		return 1;		//BUFFER NOT EMPTY YET
-	if(RF_status.Tx)
+	if (RF_status.Tx)
 		return 2;		//TRANSMITION IN PROGRESS
-	if(RF_status.Rx)
+	if (RF_status.Rx)
 		return 3;		//RECEIVING IN PROGRESS
 
 	RF_Transmit(0x82C8); //RX ON
@@ -220,19 +209,19 @@ uint8_t RF_RxFinish(char* data)
 	uint16_t crc_checksum = 0;
 	uint8_t size = RF_Data[0];
 
-	if(RF_status.Rx)
+	if (RF_status.Rx)
 		return 255;
-	if(!RF_status.New)
+	if (!RF_status.New)
 		return 254;
 
-	if(size > RF_DataLength)
+	if (size > RF_DataLength)
 	{
 		data[0] = 0;
 		RF_status.New = 0;
 		return 0; //FRAME SIZE NOT RIGHT
 	}
-	uint8_t i;
-	for(i = 0; i < (size + 1); i++)
+
+	for (uint8_t i = 0; i < (size + 1); i++)
 	{
 		crc_checksum = UpdateChecksum(crc_checksum, RF_Data[i]);
 	}
@@ -241,14 +230,17 @@ uint8_t RF_RxFinish(char* data)
 	crc |= RF_Data[i] << 8;
 	RF_status.New = 0;
 	
-	if(crc != crc_checksum)
+	if (crc != crc_checksum)
+	{
 		return 0; //DATA NOT RIGHT - DIFFERENT CHECKSUMS
+	}
 	else
 	{
-		for(int i = 0; i < size; i++)
+		for (int i = 0; i < size; i++)
 		{
-			data[i] = RF_Data[i+1];
+			data[i] = RF_Data[i + 1];
 		}
+
 		data[size] = 0; //ENDING FRAME WITH 0
 		return size; //SIZE OF RECEIVED FRAME IN BYTES
 	}
@@ -266,17 +258,18 @@ uint8_t RF_RxFinish(char* data)
 
 uint8_t RF_TxStart(char *data, uint8_t size)
 {
-	if(!size)
+	if (!size)
 		size = strlen(data);
 
-	if(RF_status.Tx)
+	if (RF_status.Tx)
 		return 1;
-	if(RF_status.Rx)
+	if (RF_status.Rx)
 		return 2;
-	if(size > RF_DataLength)
+	if (size > RF_DataLength)
 		return 3;
 
 	RF_status.Tx = 1;
+
 	//	Increasing frame size by 10 for:
 	//	Preamble of 3 bytes, 2 synchrobytes and one byte for the size of the frame
 	//	CRC16 Checksum and last preamble bytes
@@ -288,12 +281,14 @@ uint8_t RF_TxStart(char *data, uint8_t size)
 	RF_Data[index--] = 0x2D;
 	RF_Data[index--] = 0xD4;
 	RF_Data[index--] = size;
+
 	uint16_t checksum = UpdateChecksum(0, size);
-	for(int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		RF_Data[index--] = data[i];
 		checksum = UpdateChecksum(checksum,data[i]);
 	}
+
 	RF_Data[index--] = (checksum & 0x00FF);
 	RF_Data[index--] = (checksum >> 8);
 	RF_Data[index--] = 0xAA;
@@ -304,7 +299,7 @@ uint8_t RF_TxStart(char *data, uint8_t size)
 #if WAIT_UNTIL_SENT == 1
 	uint8_t timeout = 250;
 
-	while(timeout-- && RF_status.Tx)
+	while (timeout-- && RF_status.Tx)
 	{
 		_delay_ms(1);
 	}
@@ -312,7 +307,8 @@ uint8_t RF_TxStart(char *data, uint8_t size)
 
 	return 0;
 }
-/*STOPPING TRANSMITING AND RECEIVING*/
+
+// Stops transmission and reception
 void RF_AllStop(void)
 {
 	RF_status.Rx = 0;
@@ -330,13 +326,15 @@ void RF_AllStop(void)
 void RF_Ready(void)
 {
 	RF_PORT &= ~(1<<CS);
-	while(!(RF_PIN & (1<<SDO))); //Do nothing until FIFO is ready
+	while (!(RF_PIN & (1 << SDO)))
+		; //Do nothing until FIFO is ready
 }
+
 void RF_TxData(char* data, uint8_t size)
 {
 	RF_Transmit(0x8238); //TX ON
 
-	if(!size)
+	if (!size)
 		size = strlen(data);
 
 	RF_Ready();
@@ -353,7 +351,7 @@ void RF_TxData(char* data, uint8_t size)
 	RF_Transmit(0xB800 | size);
 
 	uint16_t checksum = UpdateChecksum(0, size);
-	for(int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		RF_Ready();
 		RF_Transmit(0xB800 | data[i]);
@@ -383,7 +381,7 @@ uint8_t RF_RxData(char* data)
 	uint8_t num = (RF_Transmit(0xB000) & 0x00FF);
 	uint16_t crc_Checksum = UpdateChecksum(0, num);
 
-	for(int i = 0; i < num; i++)
+	for (int i = 0; i < num; i++)
 	{
 		RF_Ready();
 		data[i] = (char)(RF_Transmit(0xB000) & 0x00FF);
@@ -397,7 +395,7 @@ uint8_t RF_RxData(char* data)
 
 	RF_Transmit(0x8208);
 
-	if(checksum != crc_Checksum)
+	if (checksum != crc_Checksum)
 	{
 		num = 0;
 		data[0] = 0;

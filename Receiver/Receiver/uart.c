@@ -1,9 +1,3 @@
-/*
- * uart.c
- *
- * Created: 11.07.2016 21:34:25
- *  Author: malek
- */ 
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include "uart.h"
@@ -14,7 +8,7 @@ typedef struct
 {
 	char characters[7]; //Currently the longest response that is interpreted is ERROR
 	uint8_t* fullyReceived; //This will be used to change different statuses
-}Message;
+} Message;
 
 Message okMessage = {{'O', 'K', '\r', '\n'}, &ESP_Response.OK};
 Message errorMessage = {{'E', 'R', 'R', 'O', 'R', '\r','\n'}, &ESP_Response.ERROR};
@@ -42,13 +36,14 @@ void UART_Initlialise(unsigned int ubrr)
 /* --- SENDING --- */
 void UART_SendChar(char data)
 {
-	while(!(UCSR0A & (1<<UDRE0))); //Waiting for empty transmit buffer
+	while (!(UCSR0A & (1<<UDRE0)))
+		; //Waiting for empty transmit buffer
 
 	UDR0 = data; //Putting data into buffer and sending the data
 }
 void UART_SendString(char *string)
 {
-	while(*string)
+	while (*string)
 	{
 		UART_SendChar(*string++);
 	}
@@ -57,7 +52,8 @@ void UART_SendString(char *string)
 /* --- RECEIVING --- */
 char UART_ReceiveChar(void)
 {
-	while(!(UCSR0A & (1<<RXC0))); //EMPTY LOOP - WAITING UNTIL DATA IS RECEIVED
+	while (!(UCSR0A & (1<<RXC0)))
+		; // Wait until data is received
 
 	return UDR0;
 }
@@ -65,19 +61,19 @@ ISR(USART_RX_vect)
 {
 	char character = UDR0;
 
-	if(messageIndex == 0)
+	if (messageIndex == 0)
 	{
-		if(character == 'E')
+		if (character == 'E')
 		{
 			message = &errorMessage;
 			messageIndex++;
 		}
-		else if(character == 'O')
+		else if (character == 'O')
 		{
 			message = &okMessage;
 			messageIndex++;
 		}
-		else if(character == '>')
+		else if (character == '>')
 		{
 			message = &inputMessage;
 			messageIndex++;
@@ -85,11 +81,11 @@ ISR(USART_RX_vect)
 	}
 	else
 	{
-		if(character == message->characters[messageIndex])
+		if (character == message->characters[messageIndex])
 		{
 			messageIndex++;	
 				
-			if(message->characters[messageIndex] == '\0')
+			if (message->characters[messageIndex] == '\0')
 			{
 				*message->fullyReceived = 1;
 				messageIndex = 0;
@@ -100,40 +96,4 @@ ISR(USART_RX_vect)
 			messageIndex = 0;
 		}
 	}
-
-	//buffer[bufferIndex] = receivedByte;
-	//if(receivedByte == '\n')
-	//{
-		//if(buffer[0] == 'O' && buffer[1] == 'K')
-		//{
-			//ESP_Response.OK = 1;
-		//}
-		//else if(buffer[0] == 'E' && buffer[1] == 'R' && buffer[4] == 'R')
-		//{
-			//ESP_Response.ERROR = 1;
-		//}
-		//else if(buffer[1] == ',' && buffer[3] == 'O')
-		//{
-			//ESP_Connections++;
-		//}
-		//else if(buffer[1] == ',' && buffer[3] == 'L')
-		//{
-			//ESP_Connections--;
-		//}
-		//else if(buffer[0] == 'S' && buffer[5] == 'O')
-			//ESP_Response.OK;
-		//bufferIndex = 0;
-	//}
-	//else if(receivedByte == ' ')
-	//{
-		//if(buffer[0] == '>')
-		//{
-			//ESP_Response.INPUT = 1;
-			//bufferIndex = 0;
-		//}	
-	//}
-	//else
-	//{
-		//bufferIndex++;
-	//}
 }
