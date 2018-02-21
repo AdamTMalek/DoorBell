@@ -1,9 +1,3 @@
-/*
- * Receiver.c
- *
- * Created: 26.09.2016 18:33:29
- * Author : Adam Malek
- */ 
 #define F_CPU 14745600
 #include <avr/io.h>
 #include <util/delay.h>

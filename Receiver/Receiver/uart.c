@@ -1,9 +1,3 @@
-/*
- * uart.c
- *
- * Created: 11.07.2016 21:34:25
- *  Author: malek
- */ 
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include "uart.h"
@@ -100,40 +94,4 @@ ISR(USART_RX_vect)
 			messageIndex = 0;
 		}
 	}
-
-	//buffer[bufferIndex] = receivedByte;
-	//if(receivedByte == '\n')
-	//{
-		//if(buffer[0] == 'O' && buffer[1] == 'K')
-		//{
-			//ESP_Response.OK = 1;
-		//}
-		//else if(buffer[0] == 'E' && buffer[1] == 'R' && buffer[4] == 'R')
-		//{
-			//ESP_Response.ERROR = 1;
-		//}
-		//else if(buffer[1] == ',' && buffer[3] == 'O')
-		//{
-			//ESP_Connections++;
-		//}
-		//else if(buffer[1] == ',' && buffer[3] == 'L')
-		//{
-			//ESP_Connections--;
-		//}
-		//else if(buffer[0] == 'S' && buffer[5] == 'O')
-			//ESP_Response.OK;
-		//bufferIndex = 0;
-	//}
-	//else if(receivedByte == ' ')
-	//{
-		//if(buffer[0] == '>')
-		//{
-			//ESP_Response.INPUT = 1;
-			//bufferIndex = 0;
-		//}	
-	//}
-	//else
-	//{
-		//bufferIndex++;
-	//}
 }

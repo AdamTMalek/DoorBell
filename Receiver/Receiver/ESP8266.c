@@ -1,9 +1,3 @@
-/*
- * ESP8266.c
- *
- * Created: 08.11.2016 17:43:51
- *  Author: malek
- */ 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
