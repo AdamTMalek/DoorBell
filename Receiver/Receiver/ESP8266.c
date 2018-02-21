@@ -60,7 +60,8 @@ uint8_t ESP_Initialize(void)
 	UART_SendString(ESP_APPASSWORD);
 	UART_SendString("\"\r\n");
 	WaitForResponse();
-	if(ESP_Response.ERROR == 1)
+
+	if (ESP_Response.ERROR == 1)
 	{
 		ESP_Response.ERROR = 0;
 		return 2;
@@ -90,25 +91,30 @@ uint8_t ESP_Initialize(void)
 	UART_SendString(ESP_ENCRYPTION);
 	UART_SendString("\r\n");
 	WaitForResponse();
-	if(ESP_Response.ERROR)
+
+	if (ESP_Response.ERROR)
 	{
 		ESP_Response.ERROR = 0;
 		return 3;
 	}
 	else
+	{
 		ESP_Response.OK = 0;
+	}
 
 	UART_SendString("AT+CIPAP=\"");
 	UART_SendString(ESP_APIP);
 	UART_SendString("\"\r\n");
 	WaitForResponse();
-	if(ESP_Response.ERROR)
+	if (ESP_Response.ERROR)
 	{
 		ESP_Response.ERROR = 0;
 		return 3;
 	}
 	else
+	{
 		ESP_Response.OK = 0;
+	}
 
 	#ifdef ESP_APMAC
 	UART_SendString("AT+CIPAPMAC=\"");
@@ -158,9 +164,9 @@ inline void ResetResponse(void)
 }
 void WaitForResponse(void)
 {
-	while(ESP_Response.OK == 0 &&
-		  ESP_Response.ERROR == 0 &&
-		  ESP_Response.INPUT == 0);
+	while (ESP_Response.OK == 0 &&
+		   ESP_Response.ERROR == 0 &&
+		   ESP_Response.INPUT == 0);
 }
 /************************************************************************/
 /*                               SENDING                                */
@@ -168,7 +174,7 @@ void WaitForResponse(void)
 uint8_t ESP_Send(char* data, char* connectionID)
 {
 #if ESP_CONNECTIONTYPE == 2
-	if(ESP_Connections == 0) //If there are no connections...
+	if (ESP_Connections == 0) //If there are no connections...
 		return 1; //Return 1 - error
 #endif
 	//Length of data
@@ -183,12 +189,15 @@ uint8_t ESP_Send(char* data, char* connectionID)
 #endif
 	UART_SendString(length);
 	UART_SendString("\r\n");
-	while(!ESP_Response.INPUT && !ESP_Response.ERROR);
-	if(ESP_Response.INPUT == 1)
+	
+	while (!ESP_Response.INPUT && !ESP_Response.ERROR)
+		;
+
+	if (ESP_Response.INPUT == 1)
 	{
 		UART_SendString(data);
 	}
-	else if(ESP_Response.ERROR) 
+	else if (ESP_Response.ERROR) 
 	{
 		ESP_Response.ERROR = 0;
 		return 1;
@@ -209,17 +218,20 @@ void ESP_StartTCPServer(uint16_t port)
 	UART_SendString("AT+CIPMUX=1\r\n");
 	WaitForResponse();
 	_delay_ms(50);
+
 	char tcpPort[5];
 	sprintf(tcpPort, "%d", port);
 	UART_SendString("AT+CIPSERVER=1,");
 	UART_SendString(tcpPort);
 	UART_SendString("\r\n");
+
 	WaitForResponse();
 	ResetResponse();
 }
 void ESP_StopTCPServer()
 {
 	UART_SendString("AT+CIPSERVER=0\r\n");
+
 	WaitForResponse();
 	ResetResponse();
 }
